@@ -35,11 +35,21 @@ class Tree:
 
         return total_under_size
 
-    def has_child(self, name: str) -> bool:
-        if name in self.children:
-            return True
+    def smallest_dir_size_over(self, size: int, smallest_dir: int | None) -> int:
+        if self.directory and self.total_size >= size:
+            if smallest_dir is None:
+                smallest_dir = self.total_size
+            else:
+                smallest_dir = min(self.total_size, smallest_dir)
 
-        return False
+        if len(self.children) == 0:
+            return smallest_dir
+
+        for child in self.children.values():
+            smallest_dir = min(
+                smallest_dir, child.smallest_dir_size_over(size, smallest_dir))
+
+        return smallest_dir
 
     def add_child(self, child: Tree):
         child.parent = self
@@ -48,7 +58,7 @@ class Tree:
 
 def change_directory(argument: str, node: Tree) -> Tree:
     if argument == '/':
-        # TODO: 
+        # TODO:
         return node
 
     if argument == '..':
@@ -57,14 +67,11 @@ def change_directory(argument: str, node: Tree) -> Tree:
     return node.children[argument]
 
 
-def solution_1(log_path: str):
-    with open(log_path, 'r', encoding='utf-8') as handle:
-        log = handle.read().split('\n')
-
+def build_tree(log: list) -> Tree:
     root = Tree('/', 0, True)
     cur_node = root
 
-    for i, entry in enumerate(log):
+    for entry in log:
         split_entry = entry.split(' ')
 
         if split_entry[0] == '$' and split_entry[1] == 'cd':
@@ -79,9 +86,27 @@ def solution_1(log_path: str):
             new_child = Tree(split_entry[1], int(split_entry[0]), False)
             cur_node.add_child(new_child)
 
-    print(root.get_total_size())
+    return root
+
+
+def solution_1(log_path: str, file_system_size: int, update_size: int):
+    with open(log_path, 'r', encoding='utf-8') as handle:
+        log = handle.read().split('\n')
+
+    root = build_tree(log)
+
+    # Solution 1
+    total_tree_size = root.get_total_size()
+    print(total_tree_size)
     print(root.total_dir_under_size(100000))
+
+    # Solution 2
+    free_space = file_system_size - total_tree_size
+    space_required = update_size - free_space
+
+    remove_size = root.smallest_dir_size_over(space_required, None)
+    print(remove_size)
 
 
 if __name__ == '__main__':
-    solution_1('day_7/input.txt')
+    solution_1('day_7/input.txt', 70000000, 30000000)
